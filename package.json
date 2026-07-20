@@ -1,0 +1,55 @@
+{
+  "name": "@thefehr/openscad-customizer-web",
+  "version": "0.1.0",
+  "description": "Auto-generated, in-browser 3D preview + STL export for OpenSCAD models — reads the official Customizer comment syntax so no per-project form code is needed.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheFehr/openscad-customizer-web.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./worker.js": "./dist/worker.js",
+    "./worker-core.js": "./dist/worker-core.js",
+    "./customizer-parser.js": "./dist/customizer-parser.js",
+    "./form-builder.js": "./dist/form-builder.js",
+    "./scad-params.js": "./dist/scad-params.js",
+    "./viewer.js": "./dist/viewer.js",
+    "./off-utils.js": "./dist/off-utils.js",
+    "./export-stl.js": "./dist/export-stl.js",
+    "./export-3mf.js": "./dist/export-3mf.js",
+    "./text-glyphs.js": "./dist/text-glyphs.js",
+    "./preview.js": "./dist/preview.js",
+    "./protocol.js": "./dist/protocol.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.worker.json",
+    "test": "npm run build && node test/parser.test.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "openscad",
+    "customizer",
+    "3d-printing",
+    "cad",
+    "three.js",
+    "stl",
+    "wasm"
+  ],
+  "peerDependencies": {
+    "three": ">=0.16 <1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.167.0",
+    "three": "^0.167.0",
+    "typescript": "^7.0.2"
+  }
+}
