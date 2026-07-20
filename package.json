@@ -1,5 +1,5 @@
 {
-  "name": "@thefehr/openscad-customizer-web",
+  "name": "openscad-customizer-web",
   "version": "0.1.0",
   "description": "Auto-generated, in-browser 3D preview + STL export for OpenSCAD models — reads the official Customizer comment syntax so no per-project form code is needed.",
   "type": "module",
@@ -7,9 +7,6 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/TheFehr/openscad-customizer-web.git"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
   },
   "main": "dist/index.js",
   "exports": {
