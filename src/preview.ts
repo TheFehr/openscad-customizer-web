@@ -125,7 +125,11 @@ export class OpenScadPreview {
     this.rendering = false;
     if (this.pendingRender) {
       this.pendingRender = false;
-      this.triggerRender();
+      // Re-enter the debounce window rather than firing immediately: if the
+      // user is still actively changing values right as the in-flight
+      // render completes, this lets further changes keep coalescing into
+      // one render instead of chaining an immediate re-render per change.
+      this.scheduleRender();
     }
   }
 
@@ -139,11 +143,15 @@ export class OpenScadPreview {
     this.setStatus(this.opts.renderingText ?? 'Rendering…', 'busy');
 
     const values = this.form ? this.form.getValues() : this.schema.defaults;
+    // Resolve to absolute URLs before handing off to the worker: a relative
+    // URL sent as-is would be re-resolved by fetch() *inside the worker's
+    // own script context* (e.g. against dist/worker.js's location), not
+    // against this page — silently fetching the wrong file.
     const request: RenderRequest = {
       type: 'render',
-      entryUrl: this.opts.scadUrl,
+      entryUrl: new URL(this.opts.scadUrl, document.baseURI).href,
       entryFsPath: this.opts.entryFsPath,
-      files: this.opts.files,
+      files: this.opts.files?.map((f) => ({ ...f, url: new URL(f.url, document.baseURI).href })),
       values,
       wasmUrl: this.opts.wasmUrl,
       textGlyphs: this.opts.textGlyphs?.(values),
