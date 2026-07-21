@@ -238,3 +238,6 @@ Core library only — not yet wired into any of the three projects that
 motivated it (door_latch, pavilion-of-scrying, spell_tiles). Migrating those
 is expected to shrink each one to a `.scad` file + a small config object,
 but hasn't been done yet.
+
+CI, Renovate, and the label-triggered release flow described above are live
+as of the `0.1.x` releases.
