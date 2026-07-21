@@ -46,10 +46,10 @@
   },
   "devDependencies": {
     "@types/jsdom": "^28.0.3",
-    "@types/three": "^0.167.0",
+    "@types/three": "^0.185.0",
     "auto-changelog": "^2.6.0",
     "jsdom": "^29.1.1",
-    "three": "^0.167.0",
+    "three": "^0.185.0",
     "typescript": "^7.0.2"
   }
 }
