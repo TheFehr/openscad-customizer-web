@@ -120,7 +120,11 @@ rather than assumed by the core:
   `examples/basic/index.html`). The default font is DejaVu Sans Bold; the
   size-calibration factor is measured against that specific font — recalibrate
   `sizeFactor` if you swap fonts (compare against OpenSCAD's own `textmetrics()`
-  for the same nominal `size`).
+  for the same nominal `size`). The override is prepended to the entry file
+  by default; set `targetFsPath` to a dependency file's `fsPath` if the
+  module that actually calls `text()` lives there instead (`use </include <`
+  doesn't affect where a *file's own* internal calls resolve, so the
+  override has to live in that specific file's text).
 - **`export-3mf.js`** — `buildMultiColor3mf(parts)` writes a single `.3mf`
   with one color per part (via the 3MF Materials & Properties Extension's
   `<m:colorgroup>`, which Bambu Studio/OrcaSlicer/PrusaSlicer read correctly
@@ -129,27 +133,53 @@ rather than assumed by the core:
 
 ## Multi-part / colored output, and other non-default rendering
 
-The default `worker.js` covers the common case: one entry file, optional
-`use </include <` dependencies, one uncolored output part. Projects that
-render multiple differently-colored passes (e.g. a two-material inlay, or
-splitting output by `color()`-tagged module) need project-specific pass
-logic — how to isolate each part varies per `.scad` file's module structure,
-so this isn't something a generic form-driven library can infer.
-
-Write a small custom worker against the low-level primitives in
-`worker-core.js` instead of reimplementing the WASM lifecycle:
+openscad-wasm's OFF export carries no `color()` — the only way to get N
+separately-colored parts is N separate render passes, each forcing the
+entry file's trailing call to a different module. The stock `worker.js`
+covers this generically via a `multiPass` config, no custom worker needed:
 
 ```js
-import { loadOpenScadModule, runOpenScadPass, fetchText, makeLogger } from
+new OpenScadPreview({
+  // ...
+  workerUrl: new URL('openscad-customizer-web/worker.js', import.meta.url),
+  multiPass: (values) => ({
+    // regex *source* matching the entry file's default trailing call
+    defaultCallPattern: '\\nbadge_base\\(\\);\\s*$',
+    passes: [
+      { call: 'badge_base();', color: values.base_color },
+      { call: 'badge_inset();', color: values.inset_color },
+    ],
+  }),
+});
+```
+
+Return `null` from `multiPass` for a plain single-part render (e.g. only
+some Customizer selections need the multi-color path). See
+`examples/advanced-multipart/` for a complete two-color badge built this
+way.
+
+This covers per-color-pass isolation within one entry file — the only
+project-specific parts are *data* (which regex matches the default call,
+what the alternate calls are, what color each gets). It doesn't cover
+switching between multiple *entry files*, or other rendering that isn't
+"loop over passes forcing a different call." For that, write a small custom
+worker against the low-level primitives in `worker-core.js` instead of
+reimplementing the WASM lifecycle:
+
+```js
+import { loadOpenScadModule, runOpenScadPass, forceCall, fetchText, makeLogger } from
   'openscad-customizer-web/worker-core.js';
 ```
 
 `runOpenScadPass(mod, files, entryFsPath, { onLog, args })` runs one render
 pass in a fresh WASM instance (each pass needs its own — the Emscripten
 runtime exits after the first `callMain()`) and returns OFF text or `null`.
-Call it once per part/color, post back `{ type: 'result', parts: [{ off, color }, ...] }`
-in the same shape the default worker uses, and `OpenScadPreview` (and
-`Viewer.loadParts`) handle the rest unmodified.
+`forceCall(entryText, defaultCallPattern, call)` is the same regex-replace
+`multiPass` uses under the hood, exported in case a custom worker still
+wants it. Call `runOpenScadPass` once per part/color, post back
+`{ type: 'result', parts: [{ off, color }, ...] }` in the same shape the
+default worker uses, and `OpenScadPreview` (and `Viewer.loadParts`) handle
+the rest unmodified.
 
 ## Requirements
 

@@ -59,7 +59,7 @@
 
 <header>
   <h1>Badge</h1>
-  <p>Two-color inset — uses a custom worker.js (worker-core.js primitives, two render passes) and downloads a multi-color .3mf, not an STL.</p>
+  <p>Two-color inset — uses the stock worker.js with a declarative multiPass config (two render passes) and downloads a multi-color .3mf, not an STL.</p>
 </header>
 
 <main>
@@ -87,11 +87,19 @@
     statusEl: document.getElementById('status'),
     downloadBtn: document.getElementById('btn-download'),
     scadUrl: './badge.scad',
-    // Custom worker (this directory), not the package's default dist/worker.js —
-    // badge_base()/badge_inset() need two separate color passes.
-    workerUrl: new URL('./worker.js', import.meta.url),
+    // Package's default worker — badge_base()/badge_inset() need two
+    // separate color passes, declared here as data rather than a custom
+    // worker (see the "Multi-part / colored output" section of the README).
+    workerUrl: new URL('../../dist/worker.js', import.meta.url),
     storageKey: 'badge-preview-params',
     bedSize: 100,
+    multiPass: (values) => ({
+      defaultCallPattern: '\\nbadge_base\\(\\);\\s*$',
+      passes: [
+        { call: 'badge_base();', color: values.base_color },
+        { call: 'badge_inset();', color: values.inset_color },
+      ],
+    }),
     // parts[].color here is a "#RRGGBB" hex string straight from the form
     // (base_color/inset_color are plain-string Customizer params), which is
     // exactly what buildMultiColor3mf's colorHex expects — no name->hex

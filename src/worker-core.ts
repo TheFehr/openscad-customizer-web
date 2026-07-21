@@ -108,6 +108,17 @@ export async function runOpenScadPass(
   }
 }
 
+/**
+ * Forces a `.scad` file's default trailing call (matched by
+ * `defaultCallPattern`, a regex source) to a different module invocation —
+ * the one piece of project-specific logic multi-part/multi-color rendering
+ * needs, generalized so it's data a project passes in rather than a custom
+ * worker it writes. No match is a no-op (returns entryText unchanged).
+ */
+export function forceCall(entryText: string, defaultCallPattern: string, call: string): string {
+  return entryText.replace(new RegExp(defaultCallPattern), `\n${call}\n`);
+}
+
 export async function fetchText(url: string): Promise<string> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);

@@ -3,7 +3,7 @@
 // output part) with zero project-specific code. Point OpenScadPreview at
 // this file directly; write a custom worker only if you need multi-part
 // color separation or other unusual rendering (see worker-core.ts).
-import { loadOpenScadModule, runOpenScadPass, fetchText, makeLogger } from './worker-core.js';
+import { loadOpenScadModule, runOpenScadPass, forceCall, fetchText, makeLogger } from './worker-core.js';
 import { parseCustomizer, type CustomizerSchema } from './customizer-parser.js';
 import { applyParamOverrides } from './scad-params.js';
 import type { RenderRequest, RenderedPart, WorkerMessage } from './protocol.js';
@@ -55,6 +55,7 @@ self.onmessage = async ({ data }: MessageEvent<RenderRequest>) => {
     ]);
 
     let entryText = sources.entryText;
+    let extraFiles = sources.extra;
 
     if (data.textGlyphs?.enabled) {
       log('rendering text glyphs…');
@@ -64,17 +65,41 @@ self.onmessage = async ({ data }: MessageEvent<RenderRequest>) => {
         data.textGlyphs.fontSize ?? 10,
         data.textGlyphs,
       );
-      entryText = `${override}\n\n${entryText}`;
+      const targetFsPath = data.textGlyphs.targetFsPath ?? sources.entryFsPath;
+      if (targetFsPath === sources.entryFsPath) {
+        entryText = `${override}\n\n${entryText}`;
+      } else {
+        extraFiles = extraFiles.map((f) =>
+          f.fsPath === targetFsPath ? { ...f, text: `${override}\n\n${f.text}` } : f,
+        );
+      }
     }
 
     entryText = applyParamOverrides(entryText, sources.schema.params, data.values ?? {});
 
-    log('invoking callMain (blocks this thread until done)…');
-    const files = [...sources.extra, { fsPath: sources.entryFsPath, text: entryText }];
-    const off = await runOpenScadPass(mod, files, sources.entryFsPath, { onLog: log });
+    let parts: RenderedPart[];
+    if (data.multiPass) {
+      const { defaultCallPattern, passes } = data.multiPass;
+      parts = [];
+      for (let i = 0; i < passes.length; i++) {
+        const { call, color } = passes[i];
+        log(`invoking callMain for pass ${i + 1}/${passes.length} (${call})…`);
+        const src = forceCall(entryText, defaultCallPattern, call);
+        const files = [...extraFiles, { fsPath: sources.entryFsPath, text: src }];
+        const off = await runOpenScadPass(mod, files, sources.entryFsPath, {
+          onLog: log,
+          outFile: `/out_${i}.off`,
+        });
+        if (off) parts.push({ off, color });
+      }
+    } else {
+      log('invoking callMain (blocks this thread until done)…');
+      const files = [...extraFiles, { fsPath: sources.entryFsPath, text: entryText }];
+      const off = await runOpenScadPass(mod, files, sources.entryFsPath, { onLog: log });
+      parts = off ? [{ off, color: null }] : [];
+    }
 
     clearTimeout(timeout);
-    const parts: RenderedPart[] = off ? [{ off, color: null }] : [];
     log(`done — ${parts.length} part(s) with geometry`);
     self.postMessage({ type: 'result', parts, values: data.values } satisfies WorkerMessage);
   } catch (err) {
