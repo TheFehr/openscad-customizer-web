@@ -25,11 +25,13 @@ const DEFAULT_CSS = `
 .oscw-hint { font-size: 11px; color: var(--oscw-muted, #8b949e); line-height: 1.35; }
 .oscw-form input[type="number"],
 .oscw-form input[type="text"],
-.oscw-form select {
+.oscw-form select,
+.oscw-form textarea {
   background: var(--oscw-surface, #161b22); border: 1px solid var(--oscw-border, #30363d);
   border-radius: 6px; color: var(--oscw-text, #e6edf3); padding: 6px 8px;
   font-size: 13px; font-family: inherit; width: 100%;
 }
+.oscw-form textarea { font-family: var(--oscw-mono, ui-monospace, monospace); resize: vertical; min-height: 4.5em; }
 .oscw-form input[type="range"] { flex: 1; accent-color: var(--oscw-accent, #58a6ff); }
 .oscw-form input:focus, .oscw-form select:focus { outline: none; border-color: var(--oscw-accent, #58a6ff); }
 .oscw-checkbox-row { display: flex; align-items: center; gap: 8px; }
@@ -206,6 +208,18 @@ export function buildForm(
         row.appendChild(input);
       });
       field.append(label, row);
+    } else if (param.widget === 'textarea') {
+      const label = document.createElement('label');
+      label.className = 'oscw-label';
+      label.textContent = labelText(param.name);
+      const textarea = document.createElement('textarea');
+      textarea.rows = 8;
+      textarea.value = String(values[param.name]);
+      textarea.addEventListener('input', () => {
+        values[param.name] = textarea.value;
+        emitChange();
+      });
+      field.append(label, textarea);
     } else {
       const label = document.createElement('label');
       label.className = 'oscw-label';

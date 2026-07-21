@@ -77,10 +77,19 @@ mode = "pocket";      // [pocket:Pocket,inlay:Inlay]  value:Label pairs -> label
 show_base = true;                            booleans -> checkbox, always
 name = "Untitled";                           string, no constraint -> free text field
 offset = [0, 0, 0];   // [-50:50]           vector -> one number input per component
+grid = "AAAA\nBBBB";  // [textarea]         string -> <textarea> instead of a single-line box
 
 /* [Hidden] */
 $fn = 64;                                    present in defaults/overrides, never shown
 ```
+
+`[textarea]` is this library's own extension, not real Customizer syntax —
+only ever applied to a plain string field. It's a deliberate net-new hint,
+not something to stay bit-compatible with: real OpenSCAD Customizer has no
+multi-line widget at all (checked against the manual), and its own comment
+parser doesn't recognize this bracket form for a string, so on the desktop
+app the same file should just fall back to an ordinary single-line text box
+— not a broken/divergent file, just a no-op there.
 
 ## API
 
@@ -158,8 +167,13 @@ Source is TypeScript under `src/`, compiled to plain ESM + `.d.ts` under
 ```sh
 npm install
 npm run build     # tsc -p tsconfig.json && tsc -p tsconfig.worker.json
-npm test          # builds, then runs test/parser.test.mjs
+npm test          # builds, then runs the test/*.test.mjs suite (node --test)
 ```
+
+Tests use Node's built-in test runner (`node:test`/`node:assert`) — no
+separate test framework dependency. `test/form-builder.test.mjs` spins up a
+fresh [jsdom](https://github.com/jsdom/jsdom) document per test (a devDependency,
+not shipped) to exercise the actual generated DOM, not just the schema.
 
 Two `tsconfig`s exist because main-thread code needs the `DOM` lib and
 worker code needs the `WebWorker` lib, and TypeScript can't type-check a

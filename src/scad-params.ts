@@ -6,8 +6,21 @@ import type { CustomizerParam } from './customizer-parser.js';
 export type ParamValue = number | string | boolean | Array<number | string>;
 export type ParamValues = Record<string, ParamValue>;
 
+// Order matters: backslash first (or a literal backslash introduced by a
+// later replace would itself get re-escaped), then the characters that
+// need a backslash escape inside an OpenSCAD/C-like double-quoted string
+// literal. A raw embedded newline (e.g. from a <textarea> value) would
+// otherwise get spliced straight into the regenerated .scad source as a
+// literal line break inside the string token — a syntax error, not valid
+// multi-line content; \r\n and lone \r are normalized to \n first so
+// Windows-style line endings don't leave a stray \r behind.
 function scadString(s: unknown): string {
-  return String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return String(s)
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\r\n?/g, '\\n')
+    .replace(/\n/g, '\\n')
+    .replace(/\t/g, '\\t');
 }
 
 function serialize(type: CustomizerParam['type'], value: ParamValue): string {

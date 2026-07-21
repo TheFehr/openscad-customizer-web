@@ -29,6 +29,8 @@ export interface DropdownOption {
   label: string;
 }
 
+export type ParamWidget = 'textarea';
+
 export interface CustomizerParam {
   name: string;
   type: ParamType;
@@ -40,6 +42,16 @@ export interface CustomizerParam {
   max?: number;
   step?: number;
   options?: DropdownOption[];
+  /**
+   * Rendering hint beyond real OpenSCAD Customizer syntax (verified against
+   * the official manual: there is no native multi-line widget — a bare `//
+   * [textarea]` is not a bracket form the desktop Customizer's own comment
+   * parser recognizes for a string, so on a real .scad file it should be
+   * silently ignored there, falling back to an ordinary single-line text
+   * box — not a divergent/broken file, just a no-op elsewhere). Only ever
+   * set when `type === 'text'`.
+   */
+  widget?: ParamWidget;
 }
 
 export interface CustomizerGroup {
@@ -200,9 +212,19 @@ export function parseCustomizer(source: string): CustomizerSchema {
           const { description: trailingDesc, constraintText } =
             splitDescriptionAndConstraint(trailingComment);
           const description = trailingDesc || descriptionFromAbove || '';
-          const constraint = constraintText
-            ? parseConstraint(constraintText, defaultValue)
-            : null;
+
+          // `[textarea]` is a library-specific widget hint, not a real
+          // Customizer range/options constraint — intercept it before
+          // parseConstraint() ever sees it, or it falls through to the
+          // options-list branch and gets misparsed as a one-item dropdown.
+          let widget: ParamWidget | undefined;
+          let constraint: Constraint | null = null;
+          if (constraintText !== null && /^textarea$/i.test(constraintText.trim())) {
+            widget = 'textarea';
+          } else if (constraintText) {
+            constraint = parseConstraint(constraintText, defaultValue);
+          }
+
           const type = classify(defaultValue, constraint);
 
           if (type) {
@@ -214,6 +236,10 @@ export function parseCustomizer(source: string): CustomizerSchema {
               group: currentGroup.name,
               hidden: currentGroup.hidden,
             };
+            // Only meaningful for a plain text field — silently dropped for
+            // any other type rather than erroring on a nonsense combination
+            // (e.g. `[textarea]` on a boolean or number default).
+            if (widget && type === 'text') param.widget = widget;
             if ((type === 'number' || type === 'vector') && constraint?.kind === 'range') {
               param.min = constraint.min;
               param.max = constraint.max;

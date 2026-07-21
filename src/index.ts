@@ -7,6 +7,7 @@ export type {
   CustomizerParam,
   CustomizerDefault,
   ParamType,
+  ParamWidget,
   DropdownOption,
 } from './customizer-parser.js';
 

@@ -29,7 +29,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.worker.json",
-    "test": "npm run build && node test/parser.test.mjs",
+    "test": "npm run build && node --test 'test/**/*.test.mjs'",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -45,7 +45,9 @@
     "three": ">=0.16 <1"
   },
   "devDependencies": {
+    "@types/jsdom": "^28.0.3",
     "@types/three": "^0.167.0",
+    "jsdom": "^29.1.1",
     "three": "^0.167.0",
     "typescript": "^7.0.2"
   }
