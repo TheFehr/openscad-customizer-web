@@ -3,6 +3,10 @@ name: Publish to npm
 # Triggered by pushing a version tag (v0.1.0, v0.1.1, ...). Bump
 # package.json's "version" first, then:
 #   git tag v0.1.0 && git push origin v0.1.0
+#
+# Auth: npm Trusted Publishing (OIDC) — no NPM_TOKEN secret. Requires the
+# package's Trusted Publisher settings on npmjs.com to list this exact repo
+# + workflow filename (see README's Development section).
 on:
   push:
     tags:
@@ -14,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write # required for npm Trusted Publishing (OIDC)
     steps:
       - uses: actions/checkout@v4
 
@@ -21,6 +26,10 @@ jobs:
         with:
           node-version: 'lts/*'
           registry-url: 'https://registry.npmjs.org'
+
+      # Trusted Publishing (OIDC) needs a recent npm CLI (11.5.1+);
+      # actions/setup-node's bundled npm can lag behind that.
+      - run: npm install -g npm@latest
 
       - run: npm ci
       - run: npm test
@@ -36,5 +45,3 @@ jobs:
         if: github.event_name == 'push'
 
       - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
