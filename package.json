@@ -1,6 +1,6 @@
 {
   "name": "openscad-customizer-web",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Auto-generated, in-browser 3D preview + STL export for OpenSCAD models — reads the official Customizer comment syntax so no per-project form code is needed.",
   "type": "module",
   "license": "MIT",
