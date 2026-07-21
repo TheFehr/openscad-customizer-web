@@ -8,7 +8,7 @@ import { Viewer } from './viewer.js';
 import { offToTrianglePositions } from './off-utils.js';
 import { downloadStl } from './export-stl.js';
 import type { ParamValues } from './scad-params.js';
-import type { RenderedPart, RenderRequest, TextGlyphsConfig, WorkerMessage } from './protocol.js';
+import type { MultiPassConfig, RenderedPart, RenderRequest, TextGlyphsConfig, WorkerMessage } from './protocol.js';
 
 export interface OpenScadPreviewOptions {
   canvas: HTMLCanvasElement;
@@ -34,6 +34,9 @@ export interface OpenScadPreviewOptions {
   /** Override the openscad-wasm CDN URL (defaults to a pinned version). */
   wasmUrl?: string;
   textGlyphs?: (values: ParamValues) => TextGlyphsConfig | undefined;
+  /** Non-null return triggers N colored render passes instead of one plain
+   *  pass — see the "Multi-part / colored output" section of the README. */
+  multiPass?: (values: ParamValues) => MultiPassConfig | null;
   timeoutSec?: number;
   debounceMs?: number;
   downloadName?: (values: ParamValues) => string;
@@ -155,6 +158,7 @@ export class OpenScadPreview {
       values,
       wasmUrl: this.opts.wasmUrl,
       textGlyphs: this.opts.textGlyphs?.(values),
+      multiPass: this.opts.multiPass?.(values) ?? undefined,
       timeoutSec: this.opts.timeoutSec,
     };
     this.worker.postMessage(request);

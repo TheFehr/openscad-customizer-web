@@ -15,6 +15,19 @@ export interface TextGlyphsConfig {
   fontSize?: number;
   fontUrl?: string;
   sizeFactor?: number;
+  /** fsPath of the file that should receive the `module text(){}` override
+   *  — defaults to the render's entry file. Needed when the file that
+   *  actually calls text() is a `use`/`include` dependency, not the entry
+   *  file itself. */
+  targetFsPath?: string;
+}
+
+export interface MultiPassConfig {
+  /** Regex *source* (not a RegExp — this crosses a postMessage boundary)
+   *  matching the entry file's default trailing call, e.g.
+   *  "\\nspell_tile\\(\\);\\s*$". */
+  defaultCallPattern: string;
+  passes: Array<{ call: string; color: string }>;
 }
 
 export interface RenderRequest {
@@ -25,6 +38,7 @@ export interface RenderRequest {
   values?: ParamValues;
   wasmUrl?: string;
   textGlyphs?: TextGlyphsConfig;
+  multiPass?: MultiPassConfig;
   timeoutSec?: number;
 }
 
