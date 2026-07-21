@@ -1,0 +1,134 @@
+name: Release
+
+# Label-driven release flow:
+#   1. Apply release:patch / release:minor / release:major to an ordinary
+#      PR before merging it — that's the human decision to cut a release.
+#   2. On merge, `open-release-pr` bumps the version, regenerates
+#      CHANGELOG.md, and opens+auto-merges a "Release vX.Y.Z" PR (labeled
+#      "release" so the next job recognizes it).
+#   3. On THAT PR's merge, `tag-release` tags the resulting commit — which
+#      is all publish.yml (unmodified) needs to build/test/publish to npm.
+#
+# Both jobs authenticate as a GitHub App, not the default GITHUB_TOKEN:
+# GITHUB_TOKEN-authored pushes/PRs don't trigger other workflows, which
+# would mean ci.yml never actually runs against the release PR. See the
+# README's "Releasing" section for the one-time App setup.
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  open-release-pr:
+    if: >-
+      github.event.pull_request.merged == true &&
+      (
+        contains(github.event.pull_request.labels.*.name, 'release:patch') ||
+        contains(github.event.pull_request.labels.*.name, 'release:minor') ||
+        contains(github.event.pull_request.labels.*.name, 'release:major')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ secrets.CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: main
+          fetch-depth: 0 # needed for auto-changelog's commit history
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 'lts/*'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Determine bump type
+        id: bump
+        run: |
+          if [ "${{ contains(github.event.pull_request.labels.*.name, 'release:major') }}" = "true" ]; then
+            echo "type=major" >> "$GITHUB_OUTPUT"
+          elif [ "${{ contains(github.event.pull_request.labels.*.name, 'release:minor') }}" = "true" ]; then
+            echo "type=minor" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=patch" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump version, regenerate changelog, open release PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          BUMP_TYPE: ${{ steps.bump.outputs.type }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+
+          NEW_VERSION=$(npm version "$BUMP_TYPE" --no-git-tag-version)
+          NEW_VERSION=${NEW_VERSION#v}
+          echo "Preparing release $NEW_VERSION"
+
+          npx auto-changelog -p
+
+          BRANCH="release/v$NEW_VERSION"
+          git checkout -b "$BRANCH"
+          git add package.json package-lock.json CHANGELOG.md
+          git commit -m "Release v$NEW_VERSION"
+
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push "$REMOTE" "$BRANCH"
+
+          gh label create release --color 0e8a16 --description "Automated release PR" 2>/dev/null || true
+
+          gh pr create --title "Release v$NEW_VERSION" \
+            --body "Automated version bump + changelog for v$NEW_VERSION. Merging this tags the commit and publishes to npm." \
+            --base main --head "$BRANCH" --label release
+
+          gh pr merge --auto --squash "$BRANCH"
+
+  tag-release:
+    if: >-
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'release')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ secrets.CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Tag the release commit
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          NEW_VERSION="v$(node -p "require('./package.json').version")"
+
+          if git rev-parse -q --verify "refs/tags/$NEW_VERSION" >/dev/null 2>&1; then
+            echo "Tag $NEW_VERSION already exists — already released, nothing to do."
+            exit 0
+          fi
+
+          echo "Tagging $NEW_VERSION"
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git tag "$NEW_VERSION"
+
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push "$REMOTE" "$NEW_VERSION"
