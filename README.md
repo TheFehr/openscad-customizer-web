@@ -15,14 +15,15 @@ projects using the library never need a bundler.
 
 ## Why
 
-Three separate personal projects (door_latch, pavilion-of-scrying,
-spell_tiles) each hand-built a `preview.html` + `preview-worker.js` from
-scratch, and they drifted: different form styles, different ways of
-splicing parameter values into the `.scad` source, duplicated OFF-parsing
-and STL-export code. This package is the common core those three files
-actually needed, minus the copy-paste — the parts that are always the same
-(WASM lifecycle, mesh parsing, viewer setup, STL export) live here; the only
-project-specific input is a `.scad` file annotated the standard way.
+If you're publishing an OpenSCAD model to the web, the usual answer is a
+project-specific `preview.html` + `preview-worker.js` built from scratch —
+its own form styling, its own way of splicing parameter values into the
+`.scad` source, its own OFF-parsing and STL-export code. Do that across a
+few projects and they drift: same problem solved slightly differently every
+time. This package is that common core, done once — the parts that are
+always the same (WASM lifecycle, mesh parsing, viewer setup, STL export)
+live here; the only project-specific input is a `.scad` file annotated the
+standard way.
 
 ## Quick start
 
@@ -264,9 +265,8 @@ automerged dependency bumps) never triggers any of this.
 
 ## Status
 
-Core library only — not yet wired into any of the three projects that
-motivated it (door_latch, pavilion-of-scrying, spell_tiles). Migrating those
-is expected to shrink each one to a `.scad` file + a small config object,
-but hasn't been done yet.
+Core library only — not yet wired into the projects that motivated it.
+Migrating a hand-built preview onto this is expected to shrink it to a
+`.scad` file + a small config object, but hasn't been done yet.
 
 CI, Renovate, and the label-triggered release flow described above are live.
