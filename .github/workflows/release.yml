@@ -85,13 +85,21 @@ jobs:
           git commit -m "Release v$NEW_VERSION"
 
           REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
-          git push "$REMOTE" "$BRANCH"
+          # Force-push: this branch is always regenerated fresh from main's
+          # current HEAD, so a re-run after a transient failure (e.g. a
+          # GitHub API 503 between this push and the pr create below) should
+          # just overwrite an earlier attempt's push, not fail non-fast-forward.
+          git push --force "$REMOTE" "$BRANCH"
 
           gh label create release --color 0e8a16 --description "Automated release PR" 2>/dev/null || true
 
-          gh pr create --title "Release v$NEW_VERSION" \
-            --body "Automated version bump + changelog for v$NEW_VERSION. Merging this tags the commit and publishes to npm." \
-            --base main --head "$BRANCH" --label release
+          # Idempotent: skip creating a duplicate PR if an earlier attempt
+          # for this same branch already got that far before failing later.
+          if ! gh pr view "$BRANCH" >/dev/null 2>&1; then
+            gh pr create --title "Release v$NEW_VERSION" \
+              --body "Automated version bump + changelog for v$NEW_VERSION. Merging this tags the commit and publishes to npm." \
+              --base main --head "$BRANCH" --label release
+          fi
 
           gh pr merge --auto --squash "$BRANCH"
 
