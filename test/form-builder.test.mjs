@@ -123,6 +123,23 @@ describe('buildForm — field types', () => {
     assert.equal(container.querySelectorAll('textarea').length, 0);
   });
 
+  test('a bare-number spinbox step (no brackets) sets the number input\'s step, with no range slider', () => {
+    const schema = parseCustomizer(`fine = 5.5; // .5`);
+    buildForm(container, schema);
+
+    assert.equal(container.querySelectorAll('input[type="range"]').length, 0);
+    const input = container.querySelector('input[type="number"]');
+    assert.equal(input.step, '0.5');
+  });
+
+  test('a bare-number string length (no brackets) sets the text input\'s maxlength', () => {
+    const schema = parseCustomizer(`label = "hello"; // 8`);
+    buildForm(container, schema);
+
+    const input = container.querySelector('input[type="text"]');
+    assert.equal(input.maxLength, 8);
+  });
+
   test('description renders as a hint under the field, and is omitted when absent', () => {
     const schema = parseCustomizer(`
       // Helpful hint
@@ -215,5 +232,23 @@ describe('buildForm — persistence and programmatic updates', () => {
     form.setValues({ count: 42 });
     assert.equal(form.getValues().count, 42);
     assert.equal(container.querySelector('input[type="number"]').value, '42');
+  });
+
+  test('a Hidden param is never restored from a saved preset — always keeps its .scad literal default', () => {
+    // Matches real Customizer: "[Hidden] variables are not retrieved from
+    // the JSON file" (persisted preset), even though they're still present
+    // in getValues()/the render request.
+    const schema = parseCustomizer(`
+      /* [Hidden] */
+      $fn = 64;
+    `);
+    const first = buildForm(container, schema, { storageKey: 'hidden-key' });
+    assert.equal(first.getValues().$fn, 64);
+    // Simulate a saved preset containing a stale/tampered hidden value.
+    localStorage.setItem('hidden-key', JSON.stringify({ $fn: 999 }));
+
+    const container2 = document.createElement('div');
+    const second = buildForm(container2, schema, { storageKey: 'hidden-key' });
+    assert.equal(second.getValues().$fn, 64, 'hidden param ignores the persisted value, keeps the source default');
   });
 });

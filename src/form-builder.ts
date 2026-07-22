@@ -93,6 +93,10 @@ export function buildForm(
     try {
       const saved = JSON.parse(localStorage.getItem(opts.storageKey) ?? '{}');
       for (const p of schema.params) {
+        // Hidden params always keep their .scad literal default, even across
+        // a saved preset — matches real Customizer ("[Hidden] variables are
+        // not retrieved from the JSON file").
+        if (p.hidden) continue;
         if (saved[p.name] !== undefined) values[p.name] = coerceForType(p.type, saved[p.name]);
       }
     } catch {
@@ -180,6 +184,7 @@ export function buildForm(
       label.textContent = labelText(param.name);
       const input = document.createElement('input');
       input.type = 'number';
+      if (param.step !== undefined) input.step = String(param.step);
       input.value = String(values[param.name]);
       input.addEventListener('input', () => {
         values[param.name] = parseFloat(input.value) || 0;
@@ -226,6 +231,7 @@ export function buildForm(
       label.textContent = labelText(param.name);
       const input = document.createElement('input');
       input.type = 'text';
+      if (param.maxLength !== undefined) input.maxLength = param.maxLength;
       input.value = String(values[param.name]);
       input.addEventListener('input', () => {
         values[param.name] = input.value;
