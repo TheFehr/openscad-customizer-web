@@ -72,15 +72,20 @@ behavior).
 
 // Shown as the field's description/tooltip
 wall_thickness = 2;   // [0.4:0.1:5]        min : step : max  -> slider
+rounding        = 3;  // [50]               bare number in brackets -> max-only slider (min 0, step 1)
 sides           = 6;  // [3,4,5,6,8,12]     comma list        -> dropdown
 mode = "pocket";      // [pocket:Pocket,inlay:Inlay]  value:Label pairs -> labeled dropdown
 show_base = true;                            booleans -> checkbox, always
 name = "Untitled";                           string, no constraint -> free text field
+fine_step = 5.5;      // .5                 bare number, no brackets -> spinbox step size
+label = "Untitled";   // 8                  bare number, no brackets -> max string length
 offset = [0, 0, 0];   // [-50:50]           vector -> one number input per component
 grid = "AAAA\nBBBB";  // [textarea]         string -> <textarea> instead of a single-line box
 
 /* [Hidden] */
-$fn = 64;                                    present in defaults/overrides, never shown
+$fn = 64;                                    present in defaults/overrides, never shown;
+                                              never restored from a saved preset either —
+                                              always the value in this file
 ```
 
 `[textarea]` is this library's own extension, not real Customizer syntax —

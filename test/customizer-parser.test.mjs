@@ -184,3 +184,72 @@ describe('parseCustomizer — [textarea] widget hint', () => {
     assert.equal(size.max, 20);
   });
 });
+
+describe('parseCustomizer — max-only slider ([50], bare number in brackets)', () => {
+  test('a bare number in brackets on a numeric default is a max-only slider (min 0, step 1)', () => {
+    const schema = parseCustomizer(`rounding = 3; // [50]`);
+    const p = byName(schema, 'rounding');
+    assert.equal(p.type, 'number');
+    assert.equal(p.min, 0);
+    assert.equal(p.max, 50);
+    assert.equal(p.step, 1);
+    assert.equal(p.options, undefined, 'must not be misparsed as a one-item dropdown');
+  });
+
+  test('applies per-component to a vector default too', () => {
+    const schema = parseCustomizer(`pos = [1, 2, 3]; // [50]`);
+    const p = byName(schema, 'pos');
+    assert.equal(p.type, 'vector');
+    assert.equal(p.min, 0);
+    assert.equal(p.max, 50);
+  });
+
+  test('a bare bracketed number on a string default is still a one-item dropdown (unaffected)', () => {
+    const schema = parseCustomizer(`mode = "50"; // [50]`);
+    const p = byName(schema, 'mode');
+    assert.equal(p.type, 'dropdown');
+    assert.deepEqual(p.options, [{ value: '50', label: '50' }]);
+  });
+});
+
+describe('parseCustomizer — bare-number trailing comment (no brackets)', () => {
+  test('spinbox step size on a numeric default', () => {
+    const schema = parseCustomizer(`Spinbox = 5.5; // .5`);
+    const p = byName(schema, 'Spinbox');
+    assert.equal(p.type, 'number');
+    assert.equal(p.step, 0.5);
+    assert.equal(p.min, undefined, 'no min/max implied, only step');
+    assert.equal(p.description, '', 'the bare number is the constraint, not description text');
+  });
+
+  test('max string length on a string default', () => {
+    const schema = parseCustomizer(`label = "hello"; // 8`);
+    const p = byName(schema, 'label');
+    assert.equal(p.type, 'text');
+    assert.equal(p.maxLength, 8);
+    assert.equal(p.description, '');
+  });
+
+  test('a preceding description line is preserved alongside the bare-number hint', () => {
+    const schema = parseCustomizer(`
+      // Max 8 characters
+      label = "hello"; // 8
+    `);
+    const p = byName(schema, 'label');
+    assert.equal(p.maxLength, 8);
+    assert.equal(p.description, 'Max 8 characters');
+  });
+
+  test('is silently dropped (no crash) on a boolean default', () => {
+    const flag = byName(parseCustomizer(`flag = true; // 8`), 'flag');
+    assert.equal(flag.type, 'boolean');
+    assert.equal(flag.maxLength, undefined);
+    assert.equal(flag.step, undefined);
+  });
+
+  test('ordinary text descriptions (non-numeric) are unaffected', () => {
+    const p = byName(parseCustomizer(`label = "hello"; // Shown on the plate`), 'label');
+    assert.equal(p.description, 'Shown on the plate');
+    assert.equal(p.maxLength, undefined);
+  });
+});
