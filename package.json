@@ -45,7 +45,7 @@
     "three": ">=0.16 <1"
   },
   "devDependencies": {
-    "@types/jsdom": "^28.0.3",
+    "@types/jsdom": "^30.0.0",
     "@types/three": "^0.185.0",
     "auto-changelog": "^2.6.0",
     "jsdom": "^30.0.0",
